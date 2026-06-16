@@ -2,7 +2,7 @@
   "name": "my-agy-usage",
   "displayName": "My Antigravity Usage",
   "description": "A lightweight, status bar only quota monitor for Antigravity AI.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "devcoramdeo",
   "icon": "dev.coramdeo_profile.png",
   "repository": {
@@ -13,8 +13,19 @@
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Other"
+    "AI"
   ],
+  "keywords": [
+    "antigravity",
+    "quota",
+    "usage",
+    "ai",
+    "gemini",
+    "claude",
+    "status bar",
+    "monitor"
+  ],
+  "license": "MIT",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -27,11 +38,6 @@
       {
         "command": "myAgyUsage.refresh",
         "title": "Refresh Quota Data",
-        "category": "Antigravity Lite"
-      },
-      {
-        "command": "myAgyUsage.setPinnedModel",
-        "title": "Set Pinned Model",
         "category": "Antigravity Lite"
       }
     ],

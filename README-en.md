@@ -2,7 +2,7 @@
 
 # My Antigravity Usage (Antigravity Lite)
 
-100% local and private. An ultra-lightweight **(~30 KB)** status bar extension that monitors your Antigravity AI model quota at a glance. No external network calls, no OAuth flows, no background processes.
+100% local and private. An ultra-lightweight **(~22 KB)** status bar extension that monitors your Antigravity AI model quota at a glance. No external network calls, no OAuth flows, no background processes.
 
 <p align="center">
   <img src="dev.coramdeo_profile.png" alt="My Antigravity Usage Icon" width="128">
@@ -29,9 +29,9 @@ Everything runs **100% on your machine**. The extension reads quota data from th
 - No Google authentication, no OAuth, no tokens stored
 - No data sent to any server, your usage patterns stay completely private
 
-## 🪶 Ultra-Lightweight (~30 KB)
+## 🪶 Ultra-Lightweight (~22 KB)
 
-Optimized with `esbuild`, the entire extension is packed into a tiny ~30 KB JavaScript bundle. 
+Optimized with `esbuild`, the entire extension is packed into a tiny ~22 KB JavaScript bundle. 
 
 - No bundled webviews, no CSS frameworks
 - Activates in milliseconds
@@ -48,7 +48,6 @@ Optimized with `esbuild`, the entire extension is packed into a tiny ~30 KB Java
 | Command | Keybinding | Description |
 |---|---|---|
 | `Antigravity Lite: Refresh Quota Data` | `Ctrl/Cmd+Shift+R` | Refresh quota data immediately |
-| `Antigravity Lite: Set Pinned Model` | - | Choose which model to pin in the status bar |
 
 ## 🚀 How to Install
 
