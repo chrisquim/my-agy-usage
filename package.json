@@ -4,7 +4,7 @@
   "description": "A lightweight, status bar only quota monitor for Antigravity AI.",
   "version": "1.0.10",
   "publisher": "devcoramdeo",
-  "icon": "dev.coramdeo_profile.png",
+  "icon": "logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/coramdeo643/my-agy-usage.git"

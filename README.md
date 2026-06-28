@@ -5,7 +5,7 @@
 100% local and private. An ultra-lightweight **(~30 KB)** status bar extension that monitors your Antigravity AI model quota at a glance. No external network calls, no OAuth flows, no background processes.
 
 <p align="center">
-  <img src="dev.coramdeo_profile.png" alt="My Antigravity Usage Icon" width="128">
+  <img src="logo.png" alt="My Antigravity Usage Icon" width="128">
 </p>
 
 ## 📸 Preview

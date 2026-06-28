@@ -5,7 +5,7 @@
 100% 로컬 프라이버시를 보장하는 초경량 **(~30 KB)** 상태 표시줄 확장 프로그램입니다. Antigravity AI 모델의 사용량(Quota)을 클릭 없이 한눈에 모니터링할 수 있습니다. 외부 네트워크 호출, OAuth 인증, 백그라운드 프로세스가 전혀 없습니다.
 
 <p align="center">
-  <img src="dev.coramdeo_profile.png" alt="My Antigravity Usage Icon" width="128">
+  <img src="logo.png" alt="My Antigravity Usage Icon" width="128">
 </p>
 
 ## 📸 미리보기
