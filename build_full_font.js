@@ -54,7 +54,7 @@ function describeFontCircle(cx, cy, r, ccw = false) {
 
 const geminiPath = "M 500 750 C 500 500 750 300 1000 300 C 750 300 500 100 500 -150 C 500 100 250 300 0 300 C 250 300 500 500 500 750 Z";
 
-const fontFileName = "myicons-v9.woff";
+const fontFileName = "myicons-v10.woff";
 const fontFile = `./resources/${fontFileName}`;
 
 const iconsConfig = {
@@ -63,8 +63,8 @@ const iconsConfig = {
 
 let glyphsXml = `<glyph glyph-name="gemini" unicode="&#xe900;" horiz-adv-x="1000" d="${geminiPath}" />\n`;
 
-// Raise cy to 480 to perfectly center within uppercase and number height
-const FONT_CENTER_Y = 480;
+// Raise cy to 525 to align perfectly with uppercase and number center
+const FONT_CENTER_Y = 525;
 
 let uRingCode = 0xe901;
 for (let i = 0; i <= 100; i += 5) {
