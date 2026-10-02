@@ -54,7 +54,7 @@ function describeFontCircle(cx, cy, r, ccw = false) {
 
 const geminiPath = "M 500 750 C 500 500 750 300 1000 300 C 750 300 500 100 500 -150 C 500 100 250 300 0 300 C 250 300 500 500 500 750 Z";
 
-const fontFileName = "myicons-v13.woff";
+const fontFileName = "myicons-v14.woff";
 const fontFile = `./resources/${fontFileName}`;
 
 const iconsConfig = {
@@ -63,8 +63,9 @@ const iconsConfig = {
 
 let glyphsXml = `<glyph glyph-name="gemini" unicode="&#xe900;" horiz-adv-x="1000" d="${geminiPath}" />\n`;
 
-// 485: lowered from 492 which was slightly too high
-const FONT_CENTER_Y = 485;
+// Glyph center stays at 492 (middle of em-square); vertical position
+// is now controlled by font-face ascent/descent metrics.
+const FONT_CENTER_Y = 492;
 
 let uRingCode = 0xe901;
 for (let i = 0; i <= 100; i += 5) {
@@ -101,7 +102,7 @@ const svgFont = `<?xml version="1.0" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg">
 <defs>
   <font id="myicons" horiz-adv-x="1000">
-    <font-face units-per-em="1000" ascent="800" descent="-200" />
+    <font-face units-per-em="1000" ascent="750" descent="-250" />
     <missing-glyph horiz-adv-x="500" />
     ${glyphsXml}
   </font>
