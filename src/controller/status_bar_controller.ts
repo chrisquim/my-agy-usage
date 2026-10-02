@@ -12,35 +12,37 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 
 function getRingSvgUri(pct: number): string {
     const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let content = '<circle cx="16" cy="16" r="12" fill="none" stroke="#404040" stroke-width="4"/>';
+    const cy = 14.5;
+    let content = `<circle cx="16" cy="${cy}" r="11.5" fill="none" stroke="#404040" stroke-width="3.5"/>`;
     if (pct >= 100) {
-        content += `<circle cx="16" cy="16" r="12" fill="none" stroke="${color}" stroke-width="4"/>`;
+        content += `<circle cx="16" cy="${cy}" r="11.5" fill="none" stroke="${color}" stroke-width="3.5"/>`;
     } else if (pct > 0) {
         const angle = (pct / 100) * 360;
-        const start = polarToCartesian(16, 16, 12, angle);
-        const end = polarToCartesian(16, 16, 12, 0);
+        const start = polarToCartesian(16, cy, 11.5, angle);
+        const end = polarToCartesian(16, cy, 11.5, 0);
         const largeArc = angle <= 180 ? '0' : '1';
-        const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 12 12 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
-        content += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
+        const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 11.5 11.5 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+        content += `<path d="${d}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 4 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
 function getPieSvgUri(pct: number): string {
     const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let content = '<circle cx="16" cy="16" r="13" fill="#404040"/>';
+    const cy = 14.5;
+    let content = `<circle cx="16" cy="${cy}" r="12" fill="#404040"/>`;
     if (pct >= 100) {
-        content += `<circle cx="16" cy="16" r="13" fill="${color}"/>`;
+        content += `<circle cx="16" cy="${cy}" r="12" fill="${color}"/>`;
     } else if (pct > 0) {
         const angle = Math.min(359.999, (pct / 100) * 360);
-        const start = polarToCartesian(16, 16, 13, angle);
-        const end = polarToCartesian(16, 16, 13, 0);
+        const start = polarToCartesian(16, cy, 12, angle);
+        const end = polarToCartesian(16, cy, 12, 0);
         const largeArc = angle <= 180 ? '0' : '1';
-        const d = `M 16 16 L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 13 13 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
+        const d = `M 16 ${cy} L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 12 12 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
         content += `<path d="${d}" fill="${color}"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 4 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
