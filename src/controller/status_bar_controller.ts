@@ -2,74 +2,6 @@ import * as vscode from 'vscode';
 import { QuotaSnapshot, FamilyQuotaSummary, ServerQuotaGroup } from '../shared/types';
 import { configService } from '../shared/config_service';
 
-function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
-    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-    return {
-        x: centerX + (radius * Math.cos(angleInRadians)),
-        y: centerY + (radius * Math.sin(angleInRadians)),
-    };
-}
-
-function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-    const start = polarToCartesian(x, y, radius, endAngle);
-    const end = polarToCartesian(x, y, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-    return [
-        'M', start.x, start.y,
-        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-    ].join(' ');
-}
-
-function describePieSlice(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-    let effectiveEndAngle = endAngle;
-    if (effectiveEndAngle >= 360) {
-        effectiveEndAngle = 359.999;
-    }
-    const start = polarToCartesian(x, y, radius, effectiveEndAngle);
-    const end = polarToCartesian(x, y, radius, startAngle);
-    const largeArcFlag = effectiveEndAngle - startAngle <= 180 ? '0' : '1';
-    return [
-        'M', x, y,
-        'L', start.x, start.y,
-        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-        'Z',
-    ].join(' ');
-}
-
-function getRingSvgDataUri(pct: number): string {
-    const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">';
-    svg += '<circle cx="16" cy="16" r="12" fill="none" stroke="#404040" stroke-width="4"/>';
-    if (pct > 0) {
-        if (pct >= 100) {
-            svg += `<circle cx="16" cy="16" r="12" fill="none" stroke="${color}" stroke-width="4"/>`;
-        } else {
-            const angle = (pct / 100) * 360;
-            const d = describeArc(16, 16, 12, 0, angle);
-            svg += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
-        }
-    }
-    svg += '</svg>';
-    return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
-}
-
-function getPieSvgDataUri(pct: number): string {
-    const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">';
-    svg += '<circle cx="16" cy="16" r="13" fill="#404040"/>';
-    if (pct > 0) {
-        if (pct >= 100) {
-            svg += `<circle cx="16" cy="16" r="13" fill="${color}"/>`;
-        } else {
-            const angle = (pct / 100) * 360;
-            const d = describePieSlice(16, 16, 13, 0, angle);
-            svg += `<path d="${d}" fill="${color}"/>`;
-        }
-    }
-    svg += '</svg>';
-    return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
-}
-
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
     private lastSnapshot?: QuotaSnapshot;
@@ -148,12 +80,10 @@ export class StatusBarController {
                     const rawBucketName = b.displayName || '';
                     const bucketName = rawBucketName.replace(/\s+Limit$/i, '').replace(/\bFive Hour\b/gi, '5-Hour');
 
-                    // In-App Notification Toast
                     vscode.window.showInformationMessage(
                         `⚡ Antigravity Quota Refreshed! ${familyName} (${bucketName}) is back to ${pctStr}%.`,
                     );
 
-                    // Audio cue if available
                     try {
                         vscode.commands.executeCommand('accessibility.signals.taskCompleted');
                     } catch {
@@ -171,63 +101,23 @@ export class StatusBarController {
             return '--';
         }
         const resetDate = new Date(resetTimeStr);
-        const ms = Math.max(0, resetDate.getTime() - Date.now());
-        if (ms <= 0) {
+        const diff = resetDate.getTime() - Date.now();
+        if (diff <= 0) {
             return '0m';
         }
-        const totalMinutes = Math.floor(ms / 60000);
-        const totalHours = Math.floor(totalMinutes / 60);
-        const totalDays = Math.floor(totalHours / 24);
-        const remainingHours = totalHours % 24;
-        const remainingMinutes = totalMinutes % 60;
-        if (totalDays > 0) {
-            return `${totalDays}d${remainingHours}h`;
-        }
-        if (totalHours > 0) {
-            return `${totalHours}h${remainingMinutes}m`;
-        }
-        return `${totalMinutes}m`;
-    }
 
-    private formatFriendlyDateTime(resetTimeStr?: string): string {
-        if (!resetTimeStr) {
-            return '--';
-        }
-        const d = new Date(resetTimeStr);
-        if (isNaN(d.getTime())) {
-            return '--';
-        }
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const dayName = days[d.getDay()];
-        const monthName = months[d.getMonth()];
-        const dayNum = d.getDate();
-        let hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        if (hours === 0) {
-            hours = 12;
-        }
-        return `${dayName}, ${monthName} ${dayNum} ${hours}:${minutes} ${ampm}`;
-    }
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-    private formatFriendlyTimeOnly(resetTimeStr?: string): string {
-        if (!resetTimeStr) {
-            return '--';
+        if (h >= 24) {
+            const d = Math.floor(h / 24);
+            const remainingH = h % 24;
+            return `${d}d ${remainingH}h`;
         }
-        const d = new Date(resetTimeStr);
-        if (isNaN(d.getTime())) {
-            return '--';
+        if (h > 0) {
+            return `${h}h${m.toString().padStart(2, '0')}m`;
         }
-        let hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        if (hours === 0) {
-            hours = 12;
-        }
-        return `${hours}:${minutes} ${ampm}`;
+        return `${m}m`;
     }
 
     private getFontChartIcon(type: 'ring' | 'pie', fraction?: number): string {
@@ -241,7 +131,6 @@ export class StatusBarController {
 
     private formatServerQuotaGroupsText(groups: ServerQuotaGroup[]): string {
         const selectedModel = configService.getStatusBarModel();
-        const selectedMetric = configService.getStatusBarMetric();
 
         let filteredGroups = groups;
         if (selectedModel === 'gemini') {
@@ -255,42 +144,17 @@ export class StatusBarController {
         }
 
         const parts = filteredGroups.map(g => {
-            let icon = '$(robot)';
             const familyName = g.displayName || '';
-            if (familyName.includes('Gemini')) {
-                icon = '$(myagy-gemini)';
-            } else if (familyName.includes('Claude') || familyName.includes('GPT')) {
-                icon = '$(robot)';
-            }
+            const initial = familyName.includes('Gemini') ? 'G' : 'C';
 
             const buckets = g.buckets || [];
             const sprintBucket = buckets.find(b => b.window === '5h') || buckets[1];
             const weeklyBucket = buckets.find(b => b.window === 'weekly') || buckets[0];
 
-            const sprintFraction = sprintBucket?.remainingFraction;
-            const sprintPctNum = sprintFraction !== undefined ? Math.floor(sprintFraction * 100) : 100;
-            const sprintIcon = this.getFontChartIcon('ring', sprintFraction);
-            const sprintCountdown = sprintBucket ? this.formatCountdown(sprintBucket.resetTime) : '--';
+            const sprintIcon = this.getFontChartIcon('ring', sprintBucket?.remainingFraction);
+            const weeklyIcon = this.getFontChartIcon('pie', weeklyBucket?.remainingFraction);
 
-            const weeklyFraction = weeklyBucket?.remainingFraction;
-            const weeklyPctNum = weeklyFraction !== undefined ? Math.floor(weeklyFraction * 100) : 100;
-            const weeklyIcon = this.getFontChartIcon('pie', weeklyFraction);
-            const weeklyCountdown = weeklyBucket ? this.formatCountdown(weeklyBucket.resetTime) : '--';
-
-            if (selectedMetric === 'percentOnly') {
-                return `${icon} ${sprintIcon} ${sprintPctNum}%, ${weeklyIcon} ${weeklyPctNum}%`;
-            } else if (selectedMetric === 'hourlyWeeklyOnly') {
-                const isWeeklyPrevailing = (weeklyFraction !== undefined && sprintFraction !== undefined)
-                    ? (weeklyFraction < sprintFraction)
-                    : false;
-                if (isWeeklyPrevailing) {
-                    return `${icon} ${weeklyIcon} ${weeklyPctNum}% (${weeklyCountdown})`;
-                } else {
-                    return `${icon} ${sprintIcon} ${sprintPctNum}% (${sprintCountdown})`;
-                }
-            } else {
-                return `${icon} ${sprintIcon} ${sprintPctNum}% (${sprintCountdown}), ${weeklyIcon} ${weeklyPctNum}% (${weeklyCountdown})`;
-            }
+            return `${initial} ${sprintIcon}/${weeklyIcon}`;
         });
         return parts.join(' | ');
     }
@@ -298,61 +162,34 @@ export class StatusBarController {
     private generateServerTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
-        tooltip.supportHtml = true;
-        tooltip.supportThemeIcons = true;
 
-        tooltip.appendMarkdown('### Antigravity Quota\n\n');
+        const lines: string[] = [];
 
         for (const g of snapshot.serverQuotaGroups!) {
-            const title = (g.displayName || 'Model').replace(/\s+Models$/i, '').replace(/\s+Limit$/i, '');
-            if (g.displayName.includes('Gemini')) {
-                const geminiSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C12 7.52285 16.4771 12 22 12C16.4771 12 12 16.4771 12 22C12 16.4771 7.52285 12 2 12C7.52285 12 12 7.52285 12 2Z"/></svg>';
-                const geminiDataUri = 'data:image/svg+xml;base64,' + Buffer.from(geminiSvg).toString('base64');
-                tooltip.appendMarkdown(`<span style="font-weight: normal; font-style: normal; display: inline-block;"><img src="${geminiDataUri}" width="14" height="14" /></span> **${title}**\n\n`);
-            } else {
-                tooltip.appendMarkdown(`<span style="font-weight: normal; font-style: normal; display: inline-block;">$(robot)</span> **${title}**\n\n`);
-            }
+            const familyName = g.displayName.includes('Gemini') ? 'Gemini' : 'Claude';
+            const buckets = g.buckets || [];
+            const sprintBucket = buckets.find(b => b.window === '5h') || buckets[1];
+            const weeklyBucket = buckets.find(b => b.window === 'weekly') || buckets[0];
 
-            const sortedBuckets = [...(g.buckets || [])].sort((a, b) => {
-                const aIs5h = a.window === '5h' || (a.displayName ? a.displayName.toLowerCase().includes('5') : false);
-                const bIs5h = b.window === '5h' || (b.displayName ? b.displayName.toLowerCase().includes('5') : false);
-                if (aIs5h && !bIs5h) {
-                    return -1;
-                }
-                if (!aIs5h && bIs5h) {
-                    return 1;
-                }
-                return 0;
-            });
+            const sprintPct = sprintBucket?.remainingFraction !== undefined
+                ? Math.floor(sprintBucket.remainingFraction * 100)
+                : 100;
+            const sprintCountdown = sprintBucket ? this.formatCountdown(sprintBucket.resetTime) : '--';
 
-            for (const b of sortedBuckets) {
-                const fraction = b.remainingFraction;
-                const pctNum = fraction !== undefined ? fraction * 100 : 0;
-                const pctStr = fraction !== undefined ? (fraction * 100).toFixed(2) + '%' : '0.00%';
-                const countdown = this.formatCountdown(b.resetTime);
-                
-                const isWeekly = b.window === 'weekly';
-                const exactTime = isWeekly 
-                    ? this.formatFriendlyDateTime(b.resetTime)
-                    : this.formatFriendlyTimeOnly(b.resetTime);
-                
-                const chartDataUri = isWeekly ? getPieSvgDataUri(pctNum) : getRingSvgDataUri(pctNum);
-                const bucketName = (b.displayName || '')
-                    .replace(/\s+Limit$/i, '')
-                    .replace(/\bFive Hour\b/gi, '5-Hour');
+            const weeklyPct = weeklyBucket?.remainingFraction !== undefined
+                ? Math.floor(weeklyBucket.remainingFraction * 100)
+                : 100;
+            const weeklyCountdown = weeklyBucket ? this.formatCountdown(weeklyBucket.resetTime) : '--';
 
-                tooltip.appendMarkdown(`<img src="${chartDataUri}" width="14" height="14" /> ${bucketName}: **${pctStr}** — ${countdown} (${exactTime})\n\n`);
-            }
-            tooltip.appendMarkdown('---\n\n');
+            lines.push(`**${familyName}** 5h ${sprintPct}% ${sprintCountdown} · 7d ${weeklyPct}% ${weeklyCountdown}`);
         }
 
-        this.appendTooltipFooter(tooltip, snapshot.timestamp);
+        tooltip.appendMarkdown(lines.join('  \n'));
         return tooltip;
     }
 
     private formatStatusBarText(summaries: FamilyQuotaSummary[]): string {
         const selectedModel = configService.getStatusBarModel();
-        const selectedMetric = configService.getStatusBarMetric();
 
         let filteredSummaries = summaries;
         if (selectedModel === 'gemini') {
@@ -366,18 +203,10 @@ export class StatusBarController {
         }
 
         const parts = filteredSummaries.map(s => {
-            if (selectedMetric === 'percentOnly') {
-                return `${s.familyName}: ${s.sprintPct}%, $(pie-chart) ${s.weeklyPct}%`;
-            } else if (selectedMetric === 'hourlyWeeklyOnly') {
-                const isWeeklyPrevailing = s.weeklyPct < s.sprintPct;
-                if (isWeeklyPrevailing) {
-                    return `${s.familyName}: $(pie-chart) ${s.weeklyPct}% (${s.weeklyCountdown})`;
-                } else {
-                    return `${s.familyName}: ${s.sprintPct}% (${s.sprintCountdown})`;
-                }
-            } else {
-                return `${s.familyName}: ${s.sprintPct}% (${s.sprintCountdown}), $(pie-chart) ${s.weeklyPct}% (${s.weeklyCountdown})`;
-            }
+            const initial = s.familyName.includes('Gemini') ? 'G' : 'C';
+            const sprintIcon = this.getFontChartIcon('ring', s.sprintPct / 100);
+            const weeklyIcon = this.getFontChartIcon('pie', s.weeklyPct / 100);
+            return `${initial} ${sprintIcon}/${weeklyIcon}`;
         });
         return parts.join(' | ');
     }
@@ -385,28 +214,18 @@ export class StatusBarController {
     private generateTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
-        tooltip.supportHtml = true;
-        tooltip.supportThemeIcons = true;
-
-        tooltip.appendMarkdown('### Antigravity Quota\n\n');
 
         if (snapshot.familySummaries && snapshot.familySummaries.length > 0) {
+            const lines: string[] = [];
             for (const s of snapshot.familySummaries) {
-                tooltip.appendMarkdown(`**${s.familyName}**\n\n`);
-                tooltip.appendMarkdown(`$(clock) 5-Hour: **${s.sprintPct}%** — ${s.sprintCountdown}\n\n`);
-                tooltip.appendMarkdown(`$(calendar) Weekly: **${s.weeklyPct}%** — ${s.weeklyCountdown}\n\n`);
-                tooltip.appendMarkdown('---\n\n');
+                const name = s.familyName.includes('Gemini') ? 'Gemini' : 'Claude';
+                lines.push(`**${name}** 5h ${s.sprintPct}% ${s.sprintCountdown} · 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
             }
+            tooltip.appendMarkdown(lines.join('  \n'));
         } else {
-            tooltip.appendMarkdown('No quota data available\n\n');
+            tooltip.appendMarkdown('No quota data available');
         }
 
-        this.appendTooltipFooter(tooltip, snapshot.timestamp);
         return tooltip;
-    }
-
-    private appendTooltipFooter(tooltip: vscode.MarkdownString, timestamp: Date): void {
-        const timeStr = timestamp.toLocaleTimeString();
-        tooltip.appendMarkdown(`*Updated ${timeStr} · Click to refresh* &nbsp;&nbsp;&nbsp;&nbsp;[$(settings) Settings](command:myAgyUsage.openSettings "Open Extension Settings")`);
     }
 }
