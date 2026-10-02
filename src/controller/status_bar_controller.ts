@@ -23,7 +23,7 @@ function getRingSvgUri(pct: number): string {
         const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 12 12 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
         content += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -4 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -2 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
@@ -40,7 +40,7 @@ function getPieSvgUri(pct: number): string {
         const d = `M 16 16 L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 13 13 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
         content += `<path d="${d}" fill="${color}"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -4 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -2 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 

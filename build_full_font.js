@@ -65,7 +65,7 @@ let glyphsXml = `<glyph glyph-name="gemini" unicode="&#xe900;" horiz-adv-x="1000
 let uRingCode = 0xe901;
 for (let i = 0; i <= 100; i += 5) {
     const hex = uRingCode.toString(16).toUpperCase();
-    const pathD = describeFontArcRing(500, 300, 350, 230, i);
+    const pathD = describeFontArcRing(500, 350, 350, 230, i);
     glyphsXml += `<glyph glyph-name="ring-${i}" unicode="&#x${hex};" horiz-adv-x="1000" d="${pathD}" />\n`;
     iconsConfig[`myagy-ring-${i}`] = {
         "description": `Ring Chart ${i}%`,
@@ -80,7 +80,7 @@ for (let i = 0; i <= 100; i += 5) {
 let uPieCode = 0xea00;
 for (let i = 0; i <= 100; i += 5) {
     const hex = uPieCode.toString(16).toUpperCase();
-    const pathD = describeFontPie(500, 300, 350, i);
+    const pathD = describeFontPie(500, 350, 350, i);
     glyphsXml += `<glyph glyph-name="pie-${i}" unicode="&#x${hex};" horiz-adv-x="1000" d="${pathD}" />\n`;
     iconsConfig[`myagy-pie-${i}`] = {
         "description": `Pie Chart ${i}%`,
