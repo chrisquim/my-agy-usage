@@ -23,7 +23,7 @@ function getRingSvgUri(pct: number): string {
         const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 12 12 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
         content += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -4 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
@@ -40,7 +40,7 @@ function getPieSvgUri(pct: number): string {
         const d = `M 16 16 L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 13 13 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
         content += `<path d="${d}" fill="${color}"/>`;
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -4 32 32">${content}</svg>`;
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
@@ -218,14 +218,14 @@ export class StatusBarController {
             const sprintPct = sprintFraction !== undefined
                 ? Math.floor(sprintFraction * 100)
                 : 100;
-            const ringImg = `<img src="${getRingSvgUri(sprintPct)}" width="14" height="14" />`;
+            const ringImg = `<img src="${getRingSvgUri(sprintPct)}" width="14" height="14" align="absmiddle" />`;
             const sprintCountdown = sprintBucket ? this.formatCountdown(sprintBucket.resetTime) : '--';
 
             const weeklyFraction = weeklyBucket?.remainingFraction;
             const weeklyPct = weeklyFraction !== undefined
                 ? Math.floor(weeklyFraction * 100)
                 : 100;
-            const pieImg = `<img src="${getPieSvgUri(weeklyPct)}" width="14" height="14" />`;
+            const pieImg = `<img src="${getPieSvgUri(weeklyPct)}" width="14" height="14" align="absmiddle" />`;
             const weeklyCountdown = weeklyBucket ? this.formatCountdown(weeklyBucket.resetTime) : '--';
 
             lines.push(`**${familyName}** ${ringImg} 5h ${sprintPct}% ${sprintCountdown} · ${pieImg} 7d ${weeklyPct}% ${weeklyCountdown}`);
@@ -266,8 +266,8 @@ export class StatusBarController {
             const lines: string[] = [];
             for (const s of snapshot.familySummaries) {
                 const name = s.familyName.includes('Gemini') ? 'Gemini' : 'Claude';
-                const ringImg = `<img src="${getRingSvgUri(s.sprintPct)}" width="14" height="14" />`;
-                const pieImg = `<img src="${getPieSvgUri(s.weeklyPct)}" width="14" height="14" />`;
+                const ringImg = `<img src="${getRingSvgUri(s.sprintPct)}" width="14" height="14" align="absmiddle" />`;
+                const pieImg = `<img src="${getPieSvgUri(s.weeklyPct)}" width="14" height="14" align="absmiddle" />`;
                 lines.push(`**${name}** ${ringImg} 5h ${s.sprintPct}% ${s.sprintCountdown} · ${pieImg} 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
             }
             tooltip.appendMarkdown(lines.join('  \n'));
