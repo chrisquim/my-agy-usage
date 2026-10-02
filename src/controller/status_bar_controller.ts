@@ -149,12 +149,12 @@ export class StatusBarController {
 
             const buckets = g.buckets || [];
             const sprintBucket = buckets.find(b => b.window === '5h') || buckets[1];
-            const weeklyBucket = buckets.find(b => b.window === 'weekly') || buckets[0];
 
-            const sprintIcon = this.getFontChartIcon('ring', sprintBucket?.remainingFraction);
-            const weeklyIcon = this.getFontChartIcon('pie', weeklyBucket?.remainingFraction);
+            const sprintFraction = sprintBucket?.remainingFraction;
+            const sprintPctNum = sprintFraction !== undefined ? Math.floor(sprintFraction * 100) : 100;
+            const sprintIcon = this.getFontChartIcon('ring', sprintFraction);
 
-            return `${initial} ${sprintIcon}/${weeklyIcon}`;
+            return `${initial} ${sprintPctNum}% ${sprintIcon}`;
         });
         return parts.join(' | ');
     }
@@ -162,6 +162,7 @@ export class StatusBarController {
     private generateServerTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
+        tooltip.supportThemeIcons = true;
 
         const lines: string[] = [];
 
@@ -171,17 +172,21 @@ export class StatusBarController {
             const sprintBucket = buckets.find(b => b.window === '5h') || buckets[1];
             const weeklyBucket = buckets.find(b => b.window === 'weekly') || buckets[0];
 
-            const sprintPct = sprintBucket?.remainingFraction !== undefined
-                ? Math.floor(sprintBucket.remainingFraction * 100)
+            const sprintFraction = sprintBucket?.remainingFraction;
+            const sprintPct = sprintFraction !== undefined
+                ? Math.floor(sprintFraction * 100)
                 : 100;
+            const sprintIcon = this.getFontChartIcon('ring', sprintFraction);
             const sprintCountdown = sprintBucket ? this.formatCountdown(sprintBucket.resetTime) : '--';
 
-            const weeklyPct = weeklyBucket?.remainingFraction !== undefined
-                ? Math.floor(weeklyBucket.remainingFraction * 100)
+            const weeklyFraction = weeklyBucket?.remainingFraction;
+            const weeklyPct = weeklyFraction !== undefined
+                ? Math.floor(weeklyFraction * 100)
                 : 100;
+            const weeklyIcon = this.getFontChartIcon('pie', weeklyFraction);
             const weeklyCountdown = weeklyBucket ? this.formatCountdown(weeklyBucket.resetTime) : '--';
 
-            lines.push(`**${familyName}** 5h ${sprintPct}% ${sprintCountdown} · 7d ${weeklyPct}% ${weeklyCountdown}`);
+            lines.push(`**${familyName}** ${sprintIcon} 5h ${sprintPct}% ${sprintCountdown} · ${weeklyIcon} 7d ${weeklyPct}% ${weeklyCountdown}`);
         }
 
         tooltip.appendMarkdown(lines.join('  \n'));
@@ -205,8 +210,7 @@ export class StatusBarController {
         const parts = filteredSummaries.map(s => {
             const initial = s.familyName.includes('Gemini') ? 'G' : 'C';
             const sprintIcon = this.getFontChartIcon('ring', s.sprintPct / 100);
-            const weeklyIcon = this.getFontChartIcon('pie', s.weeklyPct / 100);
-            return `${initial} ${sprintIcon}/${weeklyIcon}`;
+            return `${initial} ${s.sprintPct}% ${sprintIcon}`;
         });
         return parts.join(' | ');
     }
@@ -214,12 +218,15 @@ export class StatusBarController {
     private generateTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
+        tooltip.supportThemeIcons = true;
 
         if (snapshot.familySummaries && snapshot.familySummaries.length > 0) {
             const lines: string[] = [];
             for (const s of snapshot.familySummaries) {
                 const name = s.familyName.includes('Gemini') ? 'Gemini' : 'Claude';
-                lines.push(`**${name}** 5h ${s.sprintPct}% ${s.sprintCountdown} · 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
+                const sprintIcon = this.getFontChartIcon('ring', s.sprintPct / 100);
+                const weeklyIcon = this.getFontChartIcon('pie', s.weeklyPct / 100);
+                lines.push(`**${name}** ${sprintIcon} 5h ${s.sprintPct}% ${s.sprintCountdown} · ${weeklyIcon} 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
             }
             tooltip.appendMarkdown(lines.join('  \n'));
         } else {
