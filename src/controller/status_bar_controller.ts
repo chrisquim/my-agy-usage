@@ -1,76 +1,45 @@
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import { QuotaSnapshot, FamilyQuotaSummary } from '../shared/types';
+import { QuotaSnapshot, FamilyQuotaSummary, ServerQuotaGroup } from '../shared/types';
 import { configService } from '../shared/config_service';
-
-function showOsNotification(title: string, message: string): void {
-    try {
-        if (process.platform === 'win32') {
-            const cleanTitle = title.replace(/'/g, "''");
-            const cleanMessage = message.replace(/'/g, "''");
-            const psScript = `
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
-$xml = [xml]$template.GetXml()
-$nodes = $xml.GetElementsByTagName('text')
-$nodes[0].InnerText = '${cleanTitle}'
-$nodes[1].InnerText = '${cleanMessage}'
-$toastXml = New-Object Windows.Data.Xml.Dom.XmlDocument
-$toastXml.LoadXml($xml.OuterXml)
-$toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Antigravity IDE').Show($toast)
-`;
-            const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
-            exec(`powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}`, () => {});
-        } else if (process.platform === 'darwin') {
-            const cleanTitle = title.replace(/"/g, '\\"');
-            const cleanMessage = message.replace(/"/g, '\\"');
-            exec(`osascript -e 'display notification "${cleanMessage}" with title "${cleanTitle}"'`, () => {});
-        } else if (process.platform === 'linux') {
-            const cleanTitle = title.replace(/"/g, '\\"');
-            const cleanMessage = message.replace(/"/g, '\\"');
-            exec(`notify-send "${cleanTitle}" "${cleanMessage}"`, () => {});
-        }
-    } catch (e) {
-        // Fallback or ignore OS notification errors silently
-    }
-}
 
 function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
     const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
     return {
         x: centerX + (radius * Math.cos(angleInRadians)),
-        y: centerY + (radius * Math.sin(angleInRadians))
+        y: centerY + (radius * Math.sin(angleInRadians)),
     };
 }
 
 function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
     const start = polarToCartesian(x, y, radius, endAngle);
     const end = polarToCartesian(x, y, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
     return [
-        "M", start.x, start.y,
-        "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
-    ].join(" ");
+        'M', start.x, start.y,
+        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+    ].join(' ');
 }
 
 function describePieSlice(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-    if (endAngle >= 360) endAngle = 359.999;
-    const start = polarToCartesian(x, y, radius, endAngle);
+    let effectiveEndAngle = endAngle;
+    if (effectiveEndAngle >= 360) {
+        effectiveEndAngle = 359.999;
+    }
+    const start = polarToCartesian(x, y, radius, effectiveEndAngle);
     const end = polarToCartesian(x, y, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    const largeArcFlag = effectiveEndAngle - startAngle <= 180 ? '0' : '1';
     return [
-        "M", x, y,
-        "L", start.x, start.y,
-        "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-        "Z"
-    ].join(" ");
+        'M', x, y,
+        'L', start.x, start.y,
+        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+        'Z',
+    ].join(' ');
 }
 
 function getRingSvgDataUri(pct: number): string {
     const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">`;
-    svg += `<circle cx="16" cy="16" r="12" fill="none" stroke="#404040" stroke-width="4"/>`;
+    let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">';
+    svg += '<circle cx="16" cy="16" r="12" fill="none" stroke="#404040" stroke-width="4"/>';
     if (pct > 0) {
         if (pct >= 100) {
             svg += `<circle cx="16" cy="16" r="12" fill="none" stroke="${color}" stroke-width="4"/>`;
@@ -80,14 +49,14 @@ function getRingSvgDataUri(pct: number): string {
             svg += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
         }
     }
-    svg += `</svg>`;
+    svg += '</svg>';
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
 
 function getPieSvgDataUri(pct: number): string {
     const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">`;
-    svg += `<circle cx="16" cy="16" r="13" fill="#404040"/>`;
+    let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">';
+    svg += '<circle cx="16" cy="16" r="13" fill="#404040"/>';
     if (pct > 0) {
         if (pct >= 100) {
             svg += `<circle cx="16" cy="16" r="13" fill="${color}"/>`;
@@ -97,17 +66,9 @@ function getPieSvgDataUri(pct: number): string {
             svg += `<path d="${d}" fill="${color}"/>`;
         }
     }
-    svg += `</svg>`;
+    svg += '</svg>';
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
-
-const GEMINI_SVG_DATA_URI = 'data:image/svg+xml;base64,' + Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#cccccc"><path d="M12 2C12 7.52285 16.4771 12 22 12C16.4771 12 12 16.4771 12 22C12 16.4771 7.52285 12 2 12C7.52285 12 12 7.52285 12 2Z"/></svg>`
-).toString('base64');
-
-const ROBOT_SVG_DATA_URI = 'data:image/svg+xml;base64,' + Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#cccccc"><path d="M12 2a1 1 0 0 1 1 1v2.071A7.001 7.001 0 0 1 19 12v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a7.001 7.001 0 0 1 6-6.929V3a1 1 0 0 1 1-1zM3 11a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1zm18 0a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1zM8.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM9 17a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H9z"/></svg>`
-).toString('base64');
 
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
@@ -120,7 +81,7 @@ export class StatusBarController {
             100,
         );
         this.statusBarItem.command = 'myAgyUsage.refresh';
-        this.statusBarItem.text = `Loading Quota...`;
+        this.statusBarItem.text = 'Loading Quota...';
         this.statusBarItem.show();
 
         context.subscriptions.push(this.statusBarItem);
@@ -128,7 +89,7 @@ export class StatusBarController {
 
     public update(snapshot: QuotaSnapshot): void {
         if (!snapshot.isConnected) {
-            this.statusBarItem.text = `Quota Error`;
+            this.statusBarItem.text = 'Quota Error';
             this.statusBarItem.tooltip = snapshot.errorMessage || 'Failed to sync quota';
             return;
         }
@@ -146,7 +107,7 @@ export class StatusBarController {
             this.statusBarItem.text = this.formatStatusBarText(snapshot.familySummaries);
             this.statusBarItem.tooltip = this.generateTooltip(snapshot);
         } else {
-            this.statusBarItem.text = `Quota OK`;
+            this.statusBarItem.text = 'Quota OK';
             this.statusBarItem.tooltip = 'Quota synced — no model data available';
         }
     }
@@ -158,20 +119,22 @@ export class StatusBarController {
     }
 
     public setLoading(text?: string): void {
-        this.statusBarItem.text = text ? `Loading ${text}...` : `Loading...`;
+        this.statusBarItem.text = text ? `Loading ${text}...` : 'Loading...';
     }
 
     public setError(message: string): void {
-        this.statusBarItem.text = `Quota Error`;
+        this.statusBarItem.text = 'Quota Error';
         this.statusBarItem.tooltip = message;
     }
 
     public setReady(): void {
-        this.statusBarItem.text = `Quota Ready`;
+        this.statusBarItem.text = 'Quota Ready';
     }
 
-    private checkResetNotifications(groups: any[]): void {
-        if (!configService.getNotifyOnReset()) { return; }
+    private checkResetNotifications(groups: ServerQuotaGroup[]): void {
+        if (!configService.getNotifyOnReset()) {
+            return;
+        }
 
         for (const g of groups) {
             const familyName = g.displayName || 'Model';
@@ -185,21 +148,15 @@ export class StatusBarController {
                     const rawBucketName = b.displayName || '';
                     const bucketName = rawBucketName.replace(/\s+Limit$/i, '').replace(/\bFive Hour\b/gi, '5-Hour');
 
-                    // 1. In-App Notification Toast
+                    // In-App Notification Toast
                     vscode.window.showInformationMessage(
-                        `⚡ Antigravity Quota Refreshed! ${familyName} (${bucketName}) is back to ${pctStr}%.`
+                        `⚡ Antigravity Quota Refreshed! ${familyName} (${bucketName}) is back to ${pctStr}%.`,
                     );
 
-                    // 2. OS-Level Native System Notification
-                    showOsNotification(
-                        `⚡ Antigravity Quota Refreshed!`,
-                        `${familyName} (${bucketName}) is back to ${pctStr}%.`
-                    );
-
-                    // 3. Antigravity IDE Task Completion Sound Effect
+                    // Audio cue if available
                     try {
                         vscode.commands.executeCommand('accessibility.signals.taskCompleted');
-                    } catch (e) {
+                    } catch {
                         // ignore if signal command unavailable in environment
                     }
                 }
@@ -210,24 +167,36 @@ export class StatusBarController {
     }
 
     private formatCountdown(resetTimeStr?: string): string {
-        if (!resetTimeStr) return '--';
+        if (!resetTimeStr) {
+            return '--';
+        }
         const resetDate = new Date(resetTimeStr);
         const ms = Math.max(0, resetDate.getTime() - Date.now());
-        if (ms <= 0) return '0m';
+        if (ms <= 0) {
+            return '0m';
+        }
         const totalMinutes = Math.floor(ms / 60000);
         const totalHours = Math.floor(totalMinutes / 60);
         const totalDays = Math.floor(totalHours / 24);
         const remainingHours = totalHours % 24;
         const remainingMinutes = totalMinutes % 60;
-        if (totalDays > 0) return `${totalDays}d${remainingHours}h`;
-        if (totalHours > 0) return `${totalHours}h${remainingMinutes}m`;
+        if (totalDays > 0) {
+            return `${totalDays}d${remainingHours}h`;
+        }
+        if (totalHours > 0) {
+            return `${totalHours}h${remainingMinutes}m`;
+        }
         return `${totalMinutes}m`;
     }
 
     private formatFriendlyDateTime(resetTimeStr?: string): string {
-        if (!resetTimeStr) return '--';
+        if (!resetTimeStr) {
+            return '--';
+        }
         const d = new Date(resetTimeStr);
-        if (isNaN(d.getTime())) return '--';
+        if (isNaN(d.getTime())) {
+            return '--';
+        }
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const dayName = days[d.getDay()];
@@ -237,30 +206,40 @@ export class StatusBarController {
         const minutes = d.getMinutes().toString().padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
-        if (hours === 0) hours = 12;
+        if (hours === 0) {
+            hours = 12;
+        }
         return `${dayName}, ${monthName} ${dayNum} ${hours}:${minutes} ${ampm}`;
     }
 
     private formatFriendlyTimeOnly(resetTimeStr?: string): string {
-        if (!resetTimeStr) return '--';
+        if (!resetTimeStr) {
+            return '--';
+        }
         const d = new Date(resetTimeStr);
-        if (isNaN(d.getTime())) return '--';
+        if (isNaN(d.getTime())) {
+            return '--';
+        }
         let hours = d.getHours();
         const minutes = d.getMinutes().toString().padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
-        if (hours === 0) hours = 12;
+        if (hours === 0) {
+            hours = 12;
+        }
         return `${hours}:${minutes} ${ampm}`;
     }
 
     private getFontChartIcon(type: 'ring' | 'pie', fraction?: number): string {
-        if (fraction === undefined) return `$(myagy-${type}-0)`;
+        if (fraction === undefined) {
+            return `$(myagy-${type}-0)`;
+        }
         const pct = Math.max(0, Math.min(100, fraction * 100));
         const rounded = Math.round(pct / 5) * 5;
         return `$(myagy-${type}-${rounded})`;
     }
 
-    private formatServerQuotaGroupsText(groups: any[]): string {
+    private formatServerQuotaGroupsText(groups: ServerQuotaGroup[]): string {
         const selectedModel = configService.getStatusBarModel();
         const selectedMetric = configService.getStatusBarMetric();
 
@@ -277,7 +256,7 @@ export class StatusBarController {
 
         const parts = filteredGroups.map(g => {
             let icon = '$(robot)';
-            let familyName = g.displayName || '';
+            const familyName = g.displayName || '';
             if (familyName.includes('Gemini')) {
                 icon = '$(myagy-gemini)';
             } else if (familyName.includes('Claude') || familyName.includes('GPT')) {
@@ -285,8 +264,8 @@ export class StatusBarController {
             }
 
             const buckets = g.buckets || [];
-            const sprintBucket = buckets.find((b: any) => b.window === '5h') || buckets[1];
-            const weeklyBucket = buckets.find((b: any) => b.window === 'weekly') || buckets[0];
+            const sprintBucket = buckets.find(b => b.window === '5h') || buckets[1];
+            const weeklyBucket = buckets.find(b => b.window === 'weekly') || buckets[0];
 
             const sprintFraction = sprintBucket?.remainingFraction;
             const sprintPctNum = sprintFraction !== undefined ? Math.floor(sprintFraction * 100) : 100;
@@ -325,9 +304,9 @@ export class StatusBarController {
         tooltip.appendMarkdown('### Antigravity Quota\n\n');
 
         for (const g of snapshot.serverQuotaGroups!) {
-            let title = (g.displayName || 'Model').replace(/\s+Models$/i, '').replace(/\s+Limit$/i, '');
+            const title = (g.displayName || 'Model').replace(/\s+Models$/i, '').replace(/\s+Limit$/i, '');
             if (g.displayName.includes('Gemini')) {
-                const geminiSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C12 7.52285 16.4771 12 22 12C16.4771 12 12 16.4771 12 22C12 16.4771 7.52285 12 2 12C7.52285 12 12 7.52285 12 2Z"/></svg>`;
+                const geminiSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C12 7.52285 16.4771 12 22 12C16.4771 12 12 16.4771 12 22C12 16.4771 7.52285 12 2 12C7.52285 12 12 7.52285 12 2Z"/></svg>';
                 const geminiDataUri = 'data:image/svg+xml;base64,' + Buffer.from(geminiSvg).toString('base64');
                 tooltip.appendMarkdown(`<span style="font-weight: normal; font-style: normal; display: inline-block;"><img src="${geminiDataUri}" width="14" height="14" /></span> **${title}**\n\n`);
             } else {
@@ -335,10 +314,14 @@ export class StatusBarController {
             }
 
             const sortedBuckets = [...(g.buckets || [])].sort((a, b) => {
-                const aIs5h = a.window === '5h' || a.displayName?.toLowerCase().includes('5');
-                const bIs5h = b.window === '5h' || b.displayName?.toLowerCase().includes('5');
-                if (aIs5h && !bIs5h) return -1;
-                if (!aIs5h && bIs5h) return 1;
+                const aIs5h = a.window === '5h' || (a.displayName ? a.displayName.toLowerCase().includes('5') : false);
+                const bIs5h = b.window === '5h' || (b.displayName ? b.displayName.toLowerCase().includes('5') : false);
+                if (aIs5h && !bIs5h) {
+                    return -1;
+                }
+                if (!aIs5h && bIs5h) {
+                    return 1;
+                }
                 return 0;
             });
 

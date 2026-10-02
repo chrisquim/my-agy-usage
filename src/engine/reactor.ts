@@ -1,7 +1,7 @@
 import * as https from 'https';
 import * as vscode from 'vscode';
 import { logger } from '../shared/log_service';
-import { QuotaSnapshot, ModelQuotaInfo, FamilyQuotaSummary } from '../shared/types';
+import { QuotaSnapshot, ModelQuotaInfo, FamilyQuotaSummary, ServerQuotaSummaryResponse } from '../shared/types';
 import { API_ENDPOINTS } from '../shared/constants';
 
 /** Threshold in ms — reset times within 12 hours are classified as "sprint". */
@@ -15,7 +15,7 @@ export class ReactorCore {
 
     public readonly onSnapshotChange = this.snapshotChangeEmitter.event;
 
-    engage(port: number, token: string, diagnostics: any) {
+    engage(port: number, token: string, _diagnostics?: unknown) {
         this.connectPort = port;
         this.csrfToken = token;
         logger.info(`Reactor engaged on port ${port}`);
@@ -36,13 +36,13 @@ export class ReactorCore {
         if (!this.connectPort || !this.csrfToken) { return; }
         try {
             const data = await this.fetchLocalQuota();
-            let summaryData: any = null;
+            let summaryData: ServerQuotaSummaryResponse | null = null;
             try {
                 summaryData = await this.fetchQuotaSummary();
             } catch (e) {
                 logger.warn(`Quota summary fetch failed, fallback to basic telemetry: ${e}`);
             }
-            const snapshot = this.parseResponse(data, summaryData);
+            const snapshot = this.parseResponse(data, summaryData ?? undefined);
             this.snapshotChangeEmitter.fire(snapshot);
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
@@ -53,15 +53,15 @@ export class ReactorCore {
                 timestamp: new Date(),
                 isConnected: false,
                 models: [],
-                errorMessage: errorMsg
+                errorMessage: errorMsg,
             });
         }
     }
 
-    private fetchQuotaSummary(): Promise<any> {
+    private fetchQuotaSummary(): Promise<ServerQuotaSummaryResponse> {
         return new Promise((resolve, reject) => {
             const data = JSON.stringify({
-                metadata: { ideName: 'antigravity', extensionName: 'antigravity', locale: 'en' }
+                metadata: { ideName: 'antigravity', extensionName: 'antigravity', locale: 'en' },
             });
             const req = https.request({
                 hostname: '127.0.0.1',
@@ -76,7 +76,7 @@ export class ReactorCore {
                 },
                 rejectUnauthorized: false,
                 timeout: 10000,
-                agent: false
+                agent: false,
             }, res => {
                 let body = '';
                 res.on('data', d => body += d);
@@ -94,10 +94,11 @@ export class ReactorCore {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private fetchLocalQuota(): Promise<any> {
         return new Promise((resolve, reject) => {
             const data = JSON.stringify({
-                metadata: { ideName: 'antigravity', extensionName: 'antigravity', locale: 'en' }
+                metadata: { ideName: 'antigravity', extensionName: 'antigravity', locale: 'en' },
             });
             const req = https.request({
                 hostname: '127.0.0.1',
@@ -112,7 +113,7 @@ export class ReactorCore {
                 },
                 rejectUnauthorized: false,
                 timeout: 10000,
-                agent: false
+                agent: false,
             }, res => {
                 let body = '';
                 res.on('data', d => body += d);
@@ -163,7 +164,8 @@ export class ReactorCore {
         return 'Other';
     }
 
-    private parseResponse(data: any, summaryData?: any): QuotaSnapshot {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private parseResponse(data: any, summaryData?: ServerQuotaSummaryResponse): QuotaSnapshot {
         const models: ModelQuotaInfo[] = [];
         const now = Date.now();
         const status = data?.userStatus;

@@ -422,8 +422,5 @@
     "svg2ttf": "^6.1.0",
     "ttf2woff": "^3.0.0",
     "typescript": "^5.3.0"
-  },
-  "dependencies": {
-    "puppeteer": "^25.2.1"
   }
 }

@@ -25,7 +25,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         setAntigravityUserDataDir(userDataDir);
         logger.info(`[Startup] Resolved user-data-dir: ${userDataDir}, remote=${vscode.env.remoteName ?? 'local'}`);
     } catch (err) {
-        logger.warn(`[Startup] Failed to resolve user-data-dir`);
+        logger.warn('[Startup] Failed to resolve user-data-dir');
     }
 
     hunter = new ProcessHunter();
@@ -52,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(
         reactor.onSnapshotChange((snapshot) => {
             statusBar.update(snapshot);
-        })
+        }),
     );
 
     await bootSystems();
@@ -80,7 +80,7 @@ async function bootSystems(): Promise<void> {
                 setTimeout(bootSystems, AUTO_RETRY_DELAY_MS);
             } else {
                 autoRetryCount = 0;
-                statusBar.setError("Offline");
+                statusBar.setError('Offline');
             }
         }
     } catch (e) {
@@ -90,7 +90,7 @@ async function bootSystems(): Promise<void> {
             setTimeout(bootSystems, AUTO_RETRY_DELAY_MS);
         } else {
             autoRetryCount = 0;
-            statusBar.setError("Error connecting");
+            statusBar.setError('Error connecting');
         }
     }
 }
