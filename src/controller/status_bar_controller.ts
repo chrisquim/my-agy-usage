@@ -2,6 +2,48 @@ import * as vscode from 'vscode';
 import { QuotaSnapshot, FamilyQuotaSummary, ServerQuotaGroup } from '../shared/types';
 import { configService } from '../shared/config_service';
 
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+    const rad = (angleDeg - 90) * Math.PI / 180.0;
+    return {
+        x: cx + (r * Math.cos(rad)),
+        y: cy + (r * Math.sin(rad)),
+    };
+}
+
+function getRingSvgUri(pct: number): string {
+    const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
+    let content = '<circle cx="16" cy="16" r="12" fill="none" stroke="#404040" stroke-width="4"/>';
+    if (pct >= 100) {
+        content += `<circle cx="16" cy="16" r="12" fill="none" stroke="${color}" stroke-width="4"/>`;
+    } else if (pct > 0) {
+        const angle = (pct / 100) * 360;
+        const start = polarToCartesian(16, 16, 12, angle);
+        const end = polarToCartesian(16, 16, 12, 0);
+        const largeArc = angle <= 180 ? '0' : '1';
+        const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 12 12 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+        content += `<path d="${d}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
+    return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+}
+
+function getPieSvgUri(pct: number): string {
+    const color = pct <= 15 ? '#f44336' : (pct <= 30 ? '#ff9800' : '#4caf50');
+    let content = '<circle cx="16" cy="16" r="13" fill="#404040"/>';
+    if (pct >= 100) {
+        content += `<circle cx="16" cy="16" r="13" fill="${color}"/>`;
+    } else if (pct > 0) {
+        const angle = Math.min(359.999, (pct / 100) * 360);
+        const start = polarToCartesian(16, 16, 13, angle);
+        const end = polarToCartesian(16, 16, 13, 0);
+        const largeArc = angle <= 180 ? '0' : '1';
+        const d = `M 16 16 L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A 13 13 0 ${largeArc} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
+        content += `<path d="${d}" fill="${color}"/>`;
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32">${content}</svg>`;
+    return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+}
+
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
     private lastSnapshot?: QuotaSnapshot;
@@ -115,7 +157,7 @@ export class StatusBarController {
             return `${d}d ${remainingH}h`;
         }
         if (h > 0) {
-            return `${h}h${m.toString().padStart(2, '0')}m`;
+            return `${h}h ${m}m`;
         }
         return `${m}m`;
     }
@@ -162,7 +204,7 @@ export class StatusBarController {
     private generateServerTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
-        tooltip.supportThemeIcons = true;
+        tooltip.supportHtml = true;
 
         const lines: string[] = [];
 
@@ -176,17 +218,17 @@ export class StatusBarController {
             const sprintPct = sprintFraction !== undefined
                 ? Math.floor(sprintFraction * 100)
                 : 100;
-            const sprintIcon = this.getFontChartIcon('ring', sprintFraction);
+            const ringImg = `<img src="${getRingSvgUri(sprintPct)}" width="14" height="14" />`;
             const sprintCountdown = sprintBucket ? this.formatCountdown(sprintBucket.resetTime) : '--';
 
             const weeklyFraction = weeklyBucket?.remainingFraction;
             const weeklyPct = weeklyFraction !== undefined
                 ? Math.floor(weeklyFraction * 100)
                 : 100;
-            const weeklyIcon = this.getFontChartIcon('pie', weeklyFraction);
+            const pieImg = `<img src="${getPieSvgUri(weeklyPct)}" width="14" height="14" />`;
             const weeklyCountdown = weeklyBucket ? this.formatCountdown(weeklyBucket.resetTime) : '--';
 
-            lines.push(`**${familyName}** ${sprintIcon} 5h ${sprintPct}% ${sprintCountdown} · ${weeklyIcon} 7d ${weeklyPct}% ${weeklyCountdown}`);
+            lines.push(`**${familyName}** ${ringImg} 5h ${sprintPct}% ${sprintCountdown} · ${pieImg} 7d ${weeklyPct}% ${weeklyCountdown}`);
         }
 
         tooltip.appendMarkdown(lines.join('  \n'));
@@ -218,15 +260,15 @@ export class StatusBarController {
     private generateTooltip(snapshot: QuotaSnapshot): vscode.MarkdownString {
         const tooltip = new vscode.MarkdownString();
         tooltip.isTrusted = true;
-        tooltip.supportThemeIcons = true;
+        tooltip.supportHtml = true;
 
         if (snapshot.familySummaries && snapshot.familySummaries.length > 0) {
             const lines: string[] = [];
             for (const s of snapshot.familySummaries) {
                 const name = s.familyName.includes('Gemini') ? 'Gemini' : 'Claude';
-                const sprintIcon = this.getFontChartIcon('ring', s.sprintPct / 100);
-                const weeklyIcon = this.getFontChartIcon('pie', s.weeklyPct / 100);
-                lines.push(`**${name}** ${sprintIcon} 5h ${s.sprintPct}% ${s.sprintCountdown} · ${weeklyIcon} 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
+                const ringImg = `<img src="${getRingSvgUri(s.sprintPct)}" width="14" height="14" />`;
+                const pieImg = `<img src="${getPieSvgUri(s.weeklyPct)}" width="14" height="14" />`;
+                lines.push(`**${name}** ${ringImg} 5h ${s.sprintPct}% ${s.sprintCountdown} · ${pieImg} 7d ${s.weeklyPct}% ${s.weeklyCountdown}`);
             }
             tooltip.appendMarkdown(lines.join('  \n'));
         } else {
