@@ -54,7 +54,8 @@ function describeFontCircle(cx, cy, r, ccw = false) {
 
 const geminiPath = "M 500 750 C 500 500 750 300 1000 300 C 750 300 500 100 500 -150 C 500 100 250 300 0 300 C 250 300 500 500 500 750 Z";
 
-const fontFile = "./resources/myicons-v8.woff";
+const fontFileName = "myicons-v9.woff";
+const fontFile = `./resources/${fontFileName}`;
 
 const iconsConfig = {
     "myagy-gemini": { "description": "Official Monochrome Gemini Logo", "default": { "fontPath": fontFile, "fontCharacter": "\ue900" } }
@@ -62,10 +63,13 @@ const iconsConfig = {
 
 let glyphsXml = `<glyph glyph-name="gemini" unicode="&#xe900;" horiz-adv-x="1000" d="${geminiPath}" />\n`;
 
+// Raise cy to 480 to perfectly center within uppercase and number height
+const FONT_CENTER_Y = 480;
+
 let uRingCode = 0xe901;
 for (let i = 0; i <= 100; i += 5) {
     const hex = uRingCode.toString(16).toUpperCase();
-    const pathD = describeFontArcRing(500, 350, 350, 230, i);
+    const pathD = describeFontArcRing(500, FONT_CENTER_Y, 350, 230, i);
     glyphsXml += `<glyph glyph-name="ring-${i}" unicode="&#x${hex};" horiz-adv-x="1000" d="${pathD}" />\n`;
     iconsConfig[`myagy-ring-${i}`] = {
         "description": `Ring Chart ${i}%`,
@@ -80,7 +84,7 @@ for (let i = 0; i <= 100; i += 5) {
 let uPieCode = 0xea00;
 for (let i = 0; i <= 100; i += 5) {
     const hex = uPieCode.toString(16).toUpperCase();
-    const pathD = describeFontPie(500, 350, 350, i);
+    const pathD = describeFontPie(500, FONT_CENTER_Y, 350, i);
     glyphsXml += `<glyph glyph-name="pie-${i}" unicode="&#x${hex};" horiz-adv-x="1000" d="${pathD}" />\n`;
     iconsConfig[`myagy-pie-${i}`] = {
         "description": `Pie Chart ${i}%`,
@@ -107,6 +111,13 @@ const svgFont = `<?xml version="1.0" standalone="no"?>
 const ttf = svg2ttf(svgFont, {});
 const woff = ttf2woff(new Uint8Array(ttf.buffer));
 
-fs.writeFileSync(path.join(resourcesDir, 'myicons-v8.woff'), Buffer.from(woff.buffer));
+fs.writeFileSync(path.join(resourcesDir, fontFileName), Buffer.from(woff.buffer));
 fs.writeFileSync(path.join(__dirname, 'generated_font_icons_config.json'), JSON.stringify(iconsConfig, null, 2));
-console.log('Successfully generated full chart WOFF font with single-char unicode fontCharacter!');
+
+// Automatically update package.json contributes.icons with new font path and characters
+const pkgPath = path.join(__dirname, 'package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+pkg.contributes.icons = iconsConfig;
+fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+
+console.log('Successfully generated full chart WOFF font and updated package.json!');
