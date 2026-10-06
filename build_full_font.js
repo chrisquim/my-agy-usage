@@ -52,10 +52,9 @@ function describeFontCircle(cx, cy, r, ccw = false) {
     return `M ${cx} ${cy + r} A ${r} ${r} 0 1 ${sweep} ${cx} ${cy - r} A ${r} ${r} 0 1 ${sweep} ${cx} ${cy + r} Z`;
 }
 
-// Shift geminiPath down by ~150 units (750->600, 500->350, 300->150, 100->-50, -150->-300)
-const geminiPath = "M 500 600 C 500 350 750 150 1000 150 C 750 150 500 -50 500 -300 C 500 -50 250 150 0 150 C 250 150 500 350 500 600 Z";
+const geminiPath = "M 500 750 C 500 500 750 300 1000 300 C 750 300 500 100 500 -150 C 500 100 250 300 0 300 C 250 300 500 500 500 750 Z";
 
-const fontFileName = "myicons-v16.woff";
+const fontFileName = "myicons-v17.woff";
 const fontFile = `./resources/${fontFileName}`;
 
 const iconsConfig = {
@@ -64,8 +63,9 @@ const iconsConfig = {
 
 let glyphsXml = `<glyph glyph-name="gemini" unicode="&#xe900;" horiz-adv-x="1000" d="${geminiPath}" />\n`;
 
-// Glyph center shifted down physically to lower the icon in the status bar
-const FONT_CENTER_Y = 350;
+// Glyph vertical center in font units (1000 units/em, Y-up).
+// Lower value = icon rendered lower. At 16px icon size, ~62 units ≈ 1px.
+const FONT_CENTER_Y = 430;
 
 let uRingCode = 0xe901;
 for (let i = 0; i <= 100; i += 5) {
