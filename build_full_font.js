@@ -54,7 +54,7 @@ function describeFontCircle(cx, cy, r, ccw = false) {
 
 const geminiPath = "M 500 750 C 500 500 750 300 1000 300 C 750 300 500 100 500 -150 C 500 100 250 300 0 300 C 250 300 500 500 500 750 Z";
 
-const fontFileName = "myicons-v14.woff";
+const fontFileName = "myicons-v15.woff";
 const fontFile = `./resources/${fontFileName}`;
 
 const iconsConfig = {
@@ -102,7 +102,7 @@ const svgFont = `<?xml version="1.0" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg">
 <defs>
   <font id="myicons" horiz-adv-x="1000">
-    <font-face units-per-em="1000" ascent="750" descent="-250" />
+    <font-face units-per-em="1000" ascent="850" descent="-150" />
     <missing-glyph horiz-adv-x="500" />
     ${glyphsXml}
   </font>
