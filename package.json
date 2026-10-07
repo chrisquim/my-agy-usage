@@ -2,7 +2,7 @@
   "name": "my-agy-usage",
   "displayName": "My Antigravity Usage",
   "description": "A lightweight, status bar only quota monitor for Antigravity AI.",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "publisher": "devcoramdeo",
   "icon": "logo.png",
   "repository": {
